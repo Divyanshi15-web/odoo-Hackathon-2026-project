@@ -1,0 +1,15 @@
+{
+  "name": "ecosphere",
+  "version": "1.0.0",
+  "description": "EcoSphere ESG Management Platform",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

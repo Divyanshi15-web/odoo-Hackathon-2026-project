@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Enum simulation for SQLite
+// SQLite does not support Enums natively, we will use Strings
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("EMPLOYEE") // ADMIN, EMPLOYEE, AUDITOR
+  firstName String
+  lastName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  employee  Employee?
+  audits    Audit[]
+}
+
+model Department {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  employees   Employee[]
+  goals       EnvironmentalGoal[]
+  emissions   CarbonTransaction[]
+}
+
+model Employee {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  departmentId String
+  designation  String?
+  xp           Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  participations CSRActivityParticipation[]
+  challengeParticipations ChallengeParticipation[]
+  badges       EmployeeBadge[]
+  redemptions  RewardRedemption[]
+  policyAcks   PolicyAcknowledgement[]
+  complianceIssues ComplianceIssue[]
+}
+
+model EmissionFactor {
+  id           String   @id @default(uuid())
+  source       String   @unique
+  category     String   @default("General") // e.g. Manufacturing, Fleet, Electricity, Expenses
+  unit         String
+  co2Equivalent Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  transactions CarbonTransaction[]
+}
+
+model CarbonTransaction {
+  id               String   @id @default(uuid())
+  departmentId     String
+  emissionFactorId String
+  amount           Float
+  date             DateTime @default(now())
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  department       Department     @relation(fields: [departmentId], references: [id])
+  emissionFactor   EmissionFactor @relation(fields: [emissionFactorId], references: [id])
+}
+
+model EnvironmentalGoal {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  departmentId String
+  targetValue  Float
+  currentValue Float    @default(0)
+  deadline     DateTime
+  isCompleted  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department   Department @relation(fields: [departmentId], references: [id])
+}
+
+model CSRActivity {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  category    String   @default("General")
+  date        DateTime
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participations CSRActivityParticipation[]
+}
+
+model CSRActivityParticipation {
+  id            String   @id @default(uuid())
+  employeeId    String
+  activityId    String
+  hoursContributed Float
+  evidenceUrl   String?
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee    @relation(fields: [employeeId], references: [id])
+  activity      CSRActivity @relation(fields: [activityId], references: [id])
+
+  @@unique([employeeId, activityId])
+}
+
+model Challenge {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  difficulty  String   @default("MEDIUM")
+  startDate   DateTime
+  endDate     DateTime
+  points      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participations ChallengeParticipation[]
+}
+
+model ChallengeParticipation {
+  id          String   @id @default(uuid())
+  employeeId  String
+  challengeId String
+  status      String   @default("ENROLLED")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([employeeId, challengeId])
+}
+
+model Reward {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  pointsRequired Int
+  inventory   Int      @default(-1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  redemptions RewardRedemption[]
+}
+
+model RewardRedemption {
+  id          String   @id @default(uuid())
+  employeeId  String
+  rewardId    String
+  redeemedAt  DateTime @default(now())
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  reward      Reward   @relation(fields: [rewardId], references: [id])
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  iconUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employeeBadges EmployeeBadge[]
+}
+
+model EmployeeBadge {
+  id          String   @id @default(uuid())
+  employeeId  String
+  badgeId     String
+  awardedAt   DateTime @default(now())
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  badge       Badge    @relation(fields: [badgeId], references: [id])
+
+  @@unique([employeeId, badgeId])
+}
+
+model Policy {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  version     String
+  effectiveDate DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  acknowledgements PolicyAcknowledgement[]
+}
+
+model PolicyAcknowledgement {
+  id          String   @id @default(uuid())
+  employeeId  String
+  policyId    String
+  acknowledgedAt DateTime @default(now())
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  policy      Policy   @relation(fields: [policyId], references: [id])
+
+  @@unique([employeeId, policyId])
+}
+
+model Audit {
+  id          String   @id @default(uuid())
+  auditorId   String
+  title       String
+  summary     String?
+  observations String?
+  status      String   @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
+  auditDate   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  auditor     User     @relation(fields: [auditorId], references: [id])
+  issues      ComplianceIssue[]
+}
+
+model ComplianceIssue {
+  id          String   @id @default(uuid())
+  auditId     String
+  description String
+  severity    String   
+  status      String   @default("OPEN") 
+  ownerId     String?
+  dueDate     DateTime?
+  isEscalated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  audit       Audit    @relation(fields: [auditId], references: [id])
+  owner       Employee? @relation(fields: [ownerId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  title       String
+  type        String   
+  generatedBy String
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+}

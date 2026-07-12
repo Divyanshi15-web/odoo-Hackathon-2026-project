@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - JWT_SECRET=ecosphere_super_secret_jwt_key_2026
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./backend/dev.db:/app/dev.db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
